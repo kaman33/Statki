@@ -14,7 +14,7 @@ public class Statek
     private Orientacja _orientacjaStatku;
     private int _wielkosc;
     private List<SegmentStatku> _segmenty;
-
+    public IReadOnlyList<SegmentStatku> Segmenty => _segmenty;
     public Statek(int x, int y, int wielkosc, Orientacja orientacjaStatku)
     {
         this._x = x;
@@ -61,6 +61,8 @@ public class Statek
             }
         }
     }
+
+    
     public bool CzyZatopiony()
     {
         return _segmenty.All(segment => segment.CzyTrafiony);
