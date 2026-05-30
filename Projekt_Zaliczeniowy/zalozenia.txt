@@ -1,0 +1,35 @@
+﻿W ramach "projektu" należy stworzyć solucję zawierającą napisaną w języku C# aplikację desktopową (w niektórych przypadkach taka solucja może składać się z więcej niż jednego projektu - np. programu serwera i klienta oraz ew. biblioteki) lub witrynę sieciową.
+
+Można zgłaszać własny temat projektu (zgodny z opisanymi poniżej wymaganiami) lub wybrać z listy tematów (dopuszczam wybór tego samego tematu przez dwie lub trzy osoby, ale wówczas będę dokładniej sprawdzał te rozwiązania; jeśli dla tego samego tematu jedna osoba będzie pisać aplikację wyłącznie sieciową, a druga wyłącznie bazodanową, to będę te programy traktował jako pisane z różnych tematów).
+
+Można zgłaszać temat z innym rodzajem aplikacji (np. aplikacja mobilna używająca .NET MAUI), ale wówczas będzie on wymagał indywidualnego zatwierdzenia.
+
+Aplikacje desktopowe
+Wymagania mają formę przyrostową.
+
+Wymagania na ocenę 3 (wszystkie muszą być spełnione):
+
+użycie komunikacji sieciowej (zalecana architektura klient-serwer, ale w niektórych przypadkach może być jeden program pełniący rolę zarówno serwera, jak i klienta) lub baz danych;
+interfejs graficzny aplikacji (dla klienta) (ten wymóg w wyjątkowych wypadkach i po indywidualnym uzgodnieniu z prowadzącym może zostać zastąpiony przez indywidualnie ustalony złożony interfejs tekstowy).
+Przez komunikację sieciową należy w tym przypadku rozumieć komunikację przez gniazda lub przez tcplistener-y/tcpclient-ów lub udpclient-ów lub jakiś mechanizm wyższego poziomu np. WCF (Windows Communication Foundation) lub gRPC (Remote Procedure Calls). 
+
+Przez bazę danych w klasycznych tematach zazwyczaj będziemy rozumieć użycie połączeń z klasycznym serwerem bazy danych (np. PostgeSQL, MS SQL Server Oracle, MySQL), choć przykładowo w przypadku aplikacji mobilnych lepszym rozwiązaniem będzie baza osadzona (np. SQLite).
+
+Programy używające komunikacji sieciowej mogą przechowywać potrzebne dane w plikach zamiast w bazie danych (w przypadku aplikacji klient-serwer dane w pliku przechowuje serwer). Takie pliki albo mogą mieć albo uporządkowaną strukturę zgodną z jednym z ogólnie znanych podejść - np. CSV (można użyć klasy Regexp i Match),  XML (można użyć klas XDocument i XElement lub ...) lub JSON albo zserializowaną wartość obiektu kolekcji (w dowolnie wybranym mechanizmie i formacie - np. binarnie, XML, SOAP, JSON). Niewielkie ilości danych (np. informacje o punkcie końcowym połączenia) mogą być przechowywane w pliku konfiguracyjnym (Appconfig).
+
+Wymagania na ocenę 4 (wszystkie muszą być spełnione):
+
+użycie komunikacji sieciowej oraz baz danych;
+interfejs graficzny aplikacji (dla klienta) (z uwagą jak w poprzednim wariancie).
+W tym przypadku komunikacja z bazą danych nie musi używać mapowania obiektowo-relacyjnego (nie są na nią nakładane żadne ograniczenia - może używać zwykłych zapytań SQL-owych, LINQ, (wbudowanego) mapowania obiektowo-relacyjnego, wybranego ORM-a).
+
+Wymagania na ocenę 5 (wszystkie muszą być spełnione):
+
+użycie komunikacji sieciowej oraz baz danych;
+interfejs graficzny aplikacji (dla klienta);
+widoki muszą wiązać dane z modelem (DataBinding);
+przynajmniej 3 testy jednostkowe (w wybranym przez siebie frameworku);
+do wyboru
+widok musi używać kontrolki DataGrid (w WPF) lub odpowiednika (np. stworzonego przez autora wzorca i kontrolki ListView lub GridView) ze źródłem danych z ObservableCollection (obsłguje zdarzenia aktualizacji danych) z możliwością edycji danych (generalnie i tak najczęściej ten warunek będzie spełniony łącznie z poniższym),
+komunikacja z bazą danych musi używać mapowania obiektowo-relacyjnego (albo wbudowanego (przez atrybuty) albo wybranego ORM-a (np. Entity Frameworka)),
+dodatkowe elementy (np. API) lub inne nie omawiane na laboratoriach (do indywidualnego uzgodnienia).
