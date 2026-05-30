@@ -13,7 +13,7 @@ public class Statek
     private int _y;
     private Orientacja _orientacjaStatku;
     private int _wielkosc;
-    private int _trafioneSegmenty;
+    private List<SegmentStatku> _segmenty;
 
     public Statek(int x, int y, int wielkosc, Orientacja orientacjaStatku)
     {
@@ -21,33 +21,49 @@ public class Statek
         this._y = y;
         this._wielkosc = wielkosc;
         this._orientacjaStatku = orientacjaStatku;
-        this._trafioneSegmenty = 0;
+        _segmenty = new List<SegmentStatku>();
+        UtworzSegement();
     }
-
-    public bool CzyZatopiony()
-    {
-        return _trafioneSegmenty == _wielkosc;
-    }
-
-    public bool CzyZajmujePole(int strzalX, int strzalY)
+    private void UtworzSegement()
     {
         switch (_orientacjaStatku)
         {
             case Orientacja.Pozioma:
-                return strzalY == _y && strzalX >= _x && strzalX < _x + _wielkosc;
+                for (int i = 0; i < _wielkosc; i++)
+                {
+                    _segmenty.Add(new SegmentStatku(_x + i, _y));
+                }
+                break;
             case Orientacja.Pionowa:
-                return strzalX == _x && strzalY >= _y && strzalY < _y + _wielkosc;
-            default:
-                return false;
+                for (int i = 0; i < _wielkosc; i++)
+                {
+                    _segmenty.Add(new SegmentStatku(_x, _y + i));
+                }
+                break;
+
         }
     }
 
-    public void TrafionyStatek()
+
+    public bool CzyZajmujePole(int strzalX, int strzalY)
     {
-        if (this._trafioneSegmenty < _wielkosc)
+        return _segmenty.Any(segment => segment.X == strzalX && segment.Y == strzalY);
+    }
+
+    public void TrafionyStatek(int x, int y)
+    {
+        foreach (SegmentStatku segment in _segmenty)
         {
-            this._trafioneSegmenty++;
+            if (segment.X == x && segment.Y == y)
+            {
+                segment.Traf();
+                return;
+            }
         }
+    }
+    public bool CzyZatopiony()
+    {
+        return _segmenty.All(segment => segment.CzyTrafiony);
     }
     
 }
