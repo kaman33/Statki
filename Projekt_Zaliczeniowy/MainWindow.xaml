@@ -12,9 +12,9 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         
-        <TextBlock x:Name="StatusText" Grid.Row="0" FontSize="18" Margin="10" Text="Kliknij na pole przeciwnika"></TextBlock>
+        <TextBlock x:Name="StatusText" Grid.Row="0" FontSize="18" Margin="1" HorizontalAlignment="Center" Text="Kliknij na pole przeciwnika"></TextBlock>
         
-        <UniformGrid x:Name="PlanszaPrzeciwnika" Grid.Row="1" Rows="10" Columns="10" Margin="10"></UniformGrid>
+        <UniformGrid x:Name="PlanszaPrzeciwnika" Grid.Row="1" Rows="10" Columns="10" Margin="1"></UniformGrid>
         
     </Grid>
 </Window>

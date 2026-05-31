@@ -134,6 +134,19 @@ public class Plansza
     {
         return Statki.All(statek => statek.CzyZatopiony());
     }
+
+    public Statek? ZnajdzsStatekNaPolu(int x, int y)
+    {
+        foreach (Statek statek in Statki)
+        {
+            if (statek.CzyZajmujePole(x, y))
+            {
+                return statek;
+            }
+        }
+
+        return null;
+    }
     
    
 

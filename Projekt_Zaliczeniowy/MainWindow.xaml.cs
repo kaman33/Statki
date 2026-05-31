@@ -11,10 +11,6 @@ using System.Windows.Shapes;
 using Statki_Game;
 
 namespace Projekt_Zaliczeniowy;
-
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : Window
 {
 
@@ -25,6 +21,7 @@ public partial class MainWindow : Window
         UtworzPlansze();
     }
 
+    private Dictionary<(int X, int Y), Button> _przyciskPrzeciwnika = new();
     private void UtworzPlansze()
     {
         for (int y = 0; y < 10; y++)
@@ -35,7 +32,7 @@ public partial class MainWindow : Window
                 przycisk.Margin = new Thickness(2);
                 przycisk.Tag = new Pole(x, y);
                 przycisk.Click += Pole_Click;
-                
+                _przyciskPrzeciwnika[(x, y)] = przycisk;
                 PlanszaPrzeciwnika.Children.Add(przycisk);
             }
         }
@@ -59,7 +56,16 @@ public partial class MainWindow : Window
         }
         else if (wynik == Plansza.WynikStrzalu.Zatopiony)
         {
+            Statek? zatopionyStaek = _gra.ZnajdzStatekGracz2NaPolu(pole.X, pole.Y);
+            if (zatopionyStaek != null)
+            {
+                foreach(SegmentStatku segment in zatopionyStaek.Segmenty)
+                {
+                    _przyciskPrzeciwnika[(segment.X, segment.Y)].Background = Brushes.DarkRed;
+                }
+            }
             przycisk.Background = Brushes.DarkRed;
+            
         }
         
     }

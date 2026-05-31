@@ -19,6 +19,7 @@ public class GraStatki
     {
         _planszaGracz1.DodajStatek(new Statek(0, 0, 4, Statek.Orientacja.Pozioma));
         _planszaGracz1.DodajStatek(new Statek(0, 2, 3, Statek.Orientacja.Pozioma));
+        _planszaGracz1.DodajStatek(new Statek(5, 5, 4, Statek.Orientacja.Pionowa));
 
         _planszaGracz2.DodajStatek(new Statek(0, 0, 4, Statek.Orientacja.Pozioma));
         _planszaGracz2.DodajStatek(new Statek(0, 2, 3, Statek.Orientacja.Pozioma));
@@ -34,7 +35,15 @@ public class GraStatki
     {
         return _planszaGracz1.OddajStrzal(x, y);
     }
-    
+
+    public Statek? ZnajdzStatekGracz1NaPolu(int x, int y)
+    {
+        return _planszaGracz1.ZnajdzsStatekNaPolu(x, y);
+    }
+    public Statek? ZnajdzStatekGracz2NaPolu(int x, int y)
+    {
+        return _planszaGracz2.ZnajdzsStatekNaPolu(x, y);
+    }
     
     
 }
