@@ -6,6 +6,33 @@
         xmlns:local="clr-namespace:Projekt_Zaliczeniowy"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
+    <Window.Resources>
+        <Style x:Key="PolePlanszyButtonStyle" TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="Gray"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="PoleBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PoleBorder" Property="BorderBrush" Value="Green"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -14,7 +41,13 @@
         
         <TextBlock x:Name="StatusText" Grid.Row="0" FontSize="18" Margin="1" HorizontalAlignment="Center" Text="Kliknij na pole przeciwnika"></TextBlock>
         
-        <UniformGrid x:Name="PlanszaPrzeciwnika" Grid.Row="1" Rows="10" Columns="10" Margin="1"></UniformGrid>
+        <Viewbox Grid.Row="1" Stretch="Uniform" Margin="1">
+            <UniformGrid x:Name="PlanszaPrzeciwnika"
+                         Width="500"
+                         Height="500"
+                         Rows="10"
+                         Columns="10"/>
+        </Viewbox>
         
     </Grid>
 </Window>

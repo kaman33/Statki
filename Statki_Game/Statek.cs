@@ -2,70 +2,58 @@ namespace Statki_Game;
 
 public class Statek
 {
-
     public enum Orientacja
     {
         Pozioma,
         Pionowa
     }
-    
-    private int _x;
-    private int _y;
-    private Orientacja _orientacjaStatku;
-    private int _wielkosc;
-    private List<SegmentStatku> _segmenty;
+
+    private readonly List<SegmentStatku> _segmenty;
+
+    public int X { get; }
+    public int Y { get; }
+    public int Wielkosc { get; }
+    public Orientacja OrientacjaStatku { get; }
     public IReadOnlyList<SegmentStatku> Segmenty => _segmenty;
+
     public Statek(int x, int y, int wielkosc, Orientacja orientacjaStatku)
     {
-        this._x = x;
-        this._y = y;
-        this._wielkosc = wielkosc;
-        this._orientacjaStatku = orientacjaStatku;
-        _segmenty = new List<SegmentStatku>();
-        UtworzSegement();
-    }
-    private void UtworzSegement()
-    {
-        switch (_orientacjaStatku)
+        if (wielkosc <= 0)
         {
-            case Orientacja.Pozioma:
-                for (int i = 0; i < _wielkosc; i++)
-                {
-                    _segmenty.Add(new SegmentStatku(_x + i, _y));
-                }
-                break;
-            case Orientacja.Pionowa:
-                for (int i = 0; i < _wielkosc; i++)
-                {
-                    _segmenty.Add(new SegmentStatku(_x, _y + i));
-                }
-                break;
+            throw new ArgumentOutOfRangeException(nameof(wielkosc), "Statek musi miec przynajmniej jeden segment.");
+        }
 
+        X = x;
+        Y = y;
+        Wielkosc = wielkosc;
+        OrientacjaStatku = orientacjaStatku;
+        _segmenty = new List<SegmentStatku>();
+        UtworzSegmenty();
+    }
+
+    private void UtworzSegmenty()
+    {
+        for (int i = 0; i < Wielkosc; i++)
+        {
+            int segmentX = OrientacjaStatku == Orientacja.Pozioma ? X + i : X;
+            int segmentY = OrientacjaStatku == Orientacja.Pionowa ? Y + i : Y;
+            _segmenty.Add(new SegmentStatku(segmentX, segmentY));
         }
     }
 
-
-    public bool CzyZajmujePole(int strzalX, int strzalY)
+    public bool CzyZajmujePole(int x, int y)
     {
-        return _segmenty.Any(segment => segment.X == strzalX && segment.Y == strzalY);
+        return _segmenty.Any(segment => segment.X == x && segment.Y == y);
     }
 
     public void TrafionyStatek(int x, int y)
     {
-        foreach (SegmentStatku segment in _segmenty)
-        {
-            if (segment.X == x && segment.Y == y)
-            {
-                segment.Traf();
-                return;
-            }
-        }
+        SegmentStatku? segment = _segmenty.FirstOrDefault(segment => segment.X == x && segment.Y == y);
+        segment?.Traf();
     }
 
-    
     public bool CzyZatopiony()
     {
         return _segmenty.All(segment => segment.CzyTrafiony);
     }
-    
 }

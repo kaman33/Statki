@@ -24,11 +24,12 @@ public partial class MainWindow : Window
     private Dictionary<(int X, int Y), Button> _przyciskPrzeciwnika = new();
     private void UtworzPlansze()
     {
-        for (int y = 0; y < 10; y++)
+        for (int y = 0; y < Plansza.WymiarY; y++)
         {
-            for (int x = 0; x < 10; x++)
+            for (int x = 0; x < Plansza.WymiarX; x++)
             {
                 Button przycisk = new Button();
+                przycisk.Style = (Style)FindResource("PolePlanszyButtonStyle");
                 przycisk.Margin = new Thickness(2);
                 przycisk.Tag = new Pole(x, y);
                 przycisk.Click += Pole_Click;
@@ -46,28 +47,33 @@ public partial class MainWindow : Window
         Plansza.WynikStrzalu wynik = _gra.Gracz1Strzela(pole.X, pole.Y);
         StatusText.Text = wynik.ToString();
         
-        if (wynik == Plansza.WynikStrzalu.Pudlo)
-        {
-            przycisk.Background = Brushes.LightBlue;
-        }
-        else if (wynik == Plansza.WynikStrzalu.Trafiony)
-        {
-            przycisk.Background = Brushes.Red;
-        }
-        else if (wynik == Plansza.WynikStrzalu.Zatopiony)
-        {
-            Statek? zatopionyStaek = _gra.ZnajdzStatekGracz2NaPolu(pole.X, pole.Y);
-            if (zatopionyStaek != null)
-            {
-                foreach(SegmentStatku segment in zatopionyStaek.Segmenty)
-                {
-                    _przyciskPrzeciwnika[(segment.X, segment.Y)].Background = Brushes.DarkRed;
-                }
-            }
-            przycisk.Background = Brushes.DarkRed;
-            
-        }
+        OdswiezPlanszePrzeciwnika();
         
+    }
+
+    private void OdswiezPlanszePrzeciwnika()
+    {
+        Plansza planszaPrzeciwnika = _gra.PlanszaGracz2;
+
+        for (int y = 0; y < Plansza.WymiarY; y++)
+        {
+            for (int x = 0; x < Plansza.WymiarX; x++)
+            {
+                Plansza.StanPola stanPola = planszaPrzeciwnika.PobierzStanPola(x, y);
+                _przyciskPrzeciwnika[(x, y)].Background = PobierzKolorPola(stanPola);
+            }
+        }
+    }
+
+    private static Brush PobierzKolorPola(Plansza.StanPola stanPola)
+    {
+        return stanPola switch
+        {
+            Plansza.StanPola.Pudlo => Brushes.LightBlue,
+            Plansza.StanPola.Trafiony => Brushes.Red,
+            Plansza.StanPola.Zatopiony => Brushes.DarkRed,
+            _ => Brushes.White
+        };
     }
     
 }
