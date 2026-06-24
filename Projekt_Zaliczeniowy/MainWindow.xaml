@@ -36,21 +36,30 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="PanelButtonStyle" TargetType="{x:Type Button}">
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="0,8,0,12"/>
+        </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="260"/>
+        </Grid.ColumnDefinitions>
         
         <TextBlock Grid.Row="0"
+                   Grid.ColumnSpan="2"
                    FontSize="18"
-                   Margin="1"
+                   Margin="0,0,0,8"
                    HorizontalAlignment="Center"
                    Text="{Binding Status}"/>
         
-        <Viewbox Grid.Row="1" Stretch="Uniform" Margin="1">
+        <Viewbox Grid.Row="1" Grid.Column="0" Stretch="Uniform" Margin="0,0,12,0">
             <ItemsControl Width="500"
                           Height="500"
                           ItemsSource="{Binding PolaPrzeciwnika}">
@@ -70,6 +79,46 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </Viewbox>
+
+        <Grid Grid.Row="1" Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0">
+                <TextBlock FontSize="16" FontWeight="SemiBold" Text="Gra"/>
+                <TextBlock Margin="0,6,0,0">
+                    <Run Text="Strzaly: "/>
+                    <Run Text="{Binding LiczbaStrzalow, Mode=OneWay}"/>
+                </TextBlock>
+                <Button Style="{StaticResource PanelButtonStyle}"
+                        Content="Nowa gra"
+                        Command="{Binding NowaGraCommand}"/>
+                <TextBlock FontSize="16" FontWeight="SemiBold" Text="Historia"/>
+            </StackPanel>
+
+            <DataGrid Grid.Row="1"
+                      Margin="0,8,0,0"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      HeadersVisibility="Column"
+                      IsReadOnly="True"
+                      ItemsSource="{Binding HistoriaGier}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Data"
+                                        Binding="{Binding PlayedAt, StringFormat={}{0:dd.MM HH:mm}}"
+                                        Width="*"/>
+                    <DataGridTextColumn Header="Zwyciezca"
+                                        Binding="{Binding Winner}"
+                                        Width="*"/>
+                    <DataGridTextColumn Header="Strzaly"
+                                        Binding="{Binding ShotCount}"
+                                        Width="Auto"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
         
     </Grid>
 </Window>
