@@ -36,6 +36,7 @@ public class PolePlanszyViewModel : ViewModelBase
 
     public Brush Kolor => StanPola switch
     {
+        Plansza.StanPola.Statek => Brushes.Gray,
         Plansza.StanPola.Pudlo => Brushes.LightBlue,
         Plansza.StanPola.Trafiony => Brushes.Red,
         Plansza.StanPola.Zatopiony => Brushes.DarkRed,
