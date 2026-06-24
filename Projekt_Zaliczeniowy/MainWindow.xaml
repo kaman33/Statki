@@ -4,8 +4,13 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Projekt_Zaliczeniowy"
+        xmlns:viewModels="clr-namespace:Projekt_Zaliczeniowy.ViewModels"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
+    <Window.DataContext>
+        <viewModels:GraViewModel/>
+    </Window.DataContext>
+
     <Window.Resources>
         <Style x:Key="PolePlanszyButtonStyle" TargetType="{x:Type Button}">
             <Setter Property="Background" Value="White"/>
@@ -39,14 +44,31 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         
-        <TextBlock x:Name="StatusText" Grid.Row="0" FontSize="18" Margin="1" HorizontalAlignment="Center" Text="Kliknij na pole przeciwnika"></TextBlock>
+        <TextBlock Grid.Row="0"
+                   FontSize="18"
+                   Margin="1"
+                   HorizontalAlignment="Center"
+                   Text="{Binding Status}"/>
         
         <Viewbox Grid.Row="1" Stretch="Uniform" Margin="1">
-            <UniformGrid x:Name="PlanszaPrzeciwnika"
-                         Width="500"
-                         Height="500"
-                         Rows="10"
-                         Columns="10"/>
+            <ItemsControl Width="500"
+                          Height="500"
+                          ItemsSource="{Binding PolaPrzeciwnika}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Rows="10" Columns="10"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type viewModels:PolePlanszyViewModel}">
+                        <Button Style="{StaticResource PolePlanszyButtonStyle}"
+                                Margin="2"
+                                Background="{Binding Kolor}"
+                                Command="{Binding DataContext.StrzelCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                CommandParameter="{Binding}"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </Viewbox>
         
     </Grid>
