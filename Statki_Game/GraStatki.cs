@@ -129,9 +129,7 @@ public class GraStatki
 
     private static bool CzyStrzalZmieniaTure(Plansza.WynikStrzalu wynik)
     {
-        return wynik is Plansza.WynikStrzalu.Pudlo
-            or Plansza.WynikStrzalu.Trafiony
-            or Plansza.WynikStrzalu.Zatopiony;
+        return wynik == Plansza.WynikStrzalu.Pudlo;
     }
 
     private WynikRuchu OddajStrzalBezPilnowaniaTury(Gracz gracz, int x, int y)

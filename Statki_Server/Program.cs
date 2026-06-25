@@ -27,13 +27,7 @@ while (true)
     ClientConnection client = new(playerNumber, tcpClient);
     clients.Add(client);
 
-    await NetworkProtocol.SendAsync(client.Writer, new NetworkMessage
-    {
-        Type = NetworkMessageType.Welcome,
-        Player = playerNumber,
-        CurrentPlayer = ToNetworkPlayer(game.AktualnyGracz),
-        Text = $"Polaczono jako Gracz {playerNumber}."
-    });
+    await SendStateAsync(client, NetworkMessageType.Welcome, $"Polaczono jako Gracz {playerNumber}.", string.Empty, null);
 
     Console.WriteLine($"Polaczono Gracza {playerNumber}.");
     _ = Task.Run(() => HandleClientAsync(client));
@@ -75,22 +69,14 @@ async Task HandleShotAsync(ClientConnection client, NetworkMessage message)
     try
     {
         GraStatki.Gracz player = FromNetworkPlayer(client.PlayerNumber);
-        GraStatki.WynikRuchu moveResult = game.OddajStrzal(player, message.X, message.Y);
-
-        NetworkMessage response = new()
+        if (clients.Count < 2)
         {
-            Type = NetworkMessageType.ShotResult,
-            Player = client.PlayerNumber,
-            X = message.X,
-            Y = message.Y,
-            Result = moveResult.Wynik.ToString(),
-            GameOver = moveResult.KoniecGry,
-            Winner = moveResult.Zwyciezca is null ? null : ToNetworkPlayer(moveResult.Zwyciezca.Value),
-            CurrentPlayer = ToNetworkPlayer(game.AktualnyGracz),
-            Text = $"Gracz {client.PlayerNumber}: {moveResult.Wynik}"
-        };
+            await SendStateAsync(client, NetworkMessageType.Error, "Poczekaj na drugiego gracza.", string.Empty, null);
+            return;
+        }
 
-        await BroadcastAsync(response);
+        GraStatki.WynikRuchu moveResult = game.OddajStrzal(player, message.X, message.Y);
+        await BroadcastStateAsync($"Gracz {client.PlayerNumber}: {moveResult.Wynik}", moveResult.Wynik.ToString(), moveResult);
     }
     finally
     {
@@ -98,12 +84,58 @@ async Task HandleShotAsync(ClientConnection client, NetworkMessage message)
     }
 }
 
-async Task BroadcastAsync(NetworkMessage message)
+async Task BroadcastStateAsync(string text, string result, GraStatki.WynikRuchu? moveResult)
 {
     foreach (ClientConnection client in clients.ToList())
     {
-        await NetworkProtocol.SendAsync(client.Writer, message);
+        await SendStateAsync(client, NetworkMessageType.ShotResult, text, result, moveResult);
     }
+}
+
+async Task SendStateAsync(
+    ClientConnection client,
+    NetworkMessageType type,
+    string text,
+    string result,
+    GraStatki.WynikRuchu? moveResult)
+{
+    GraStatki.Gracz player = FromNetworkPlayer(client.PlayerNumber);
+    GraStatki.Gracz opponent = GraStatki.PobierzPrzeciwnika(player);
+
+    NetworkMessage message = new()
+    {
+        Type = type,
+        Player = client.PlayerNumber,
+        Result = result,
+        GameOver = moveResult?.KoniecGry ?? game.Stan == GraStatki.StanGry.Zakonczona,
+        Winner = moveResult?.Zwyciezca is null ? null : ToNetworkPlayer(moveResult.Zwyciezca.Value),
+        CurrentPlayer = ToNetworkPlayer(game.AktualnyGracz),
+        Text = text,
+        OwnBoard = CreateBoardSnapshot(game.PobierzPlansze(player), showShips: true),
+        OpponentBoard = CreateBoardSnapshot(game.PobierzPlansze(opponent), showShips: false)
+    };
+
+    await NetworkProtocol.SendAsync(client.Writer, message);
+}
+
+static List<NetworkCell> CreateBoardSnapshot(Plansza board, bool showShips)
+{
+    List<NetworkCell> cells = new();
+
+    for (int y = 0; y < Plansza.WymiarY; y++)
+    {
+        for (int x = 0; x < Plansza.WymiarX; x++)
+        {
+            cells.Add(new NetworkCell
+            {
+                X = x,
+                Y = y,
+                State = board.PobierzStanPola(x, y, showShips).ToString()
+            });
+        }
+    }
+
+    return cells;
 }
 
 async Task RejectClientAsync(TcpClient tcpClient, string reason)

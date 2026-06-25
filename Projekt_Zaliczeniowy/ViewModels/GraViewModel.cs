@@ -17,8 +17,11 @@ public class GraViewModel : ViewModelBase
     private readonly StatkiNetworkClient _networkClient;
     private readonly Random _random;
     private int _liczbaStrzalow;
+    private int _aktualnyGraczSieciowy = 1;
     private int? _numerGraczaSieciowego;
     private TrybGry _trybGry;
+    private bool _botWykonujeRuch;
+    private bool _pokazanoKoniecGry;
     private bool _wynikZapisany;
     private string _statusSieci;
     private string _status;
@@ -34,6 +37,8 @@ public class GraViewModel : ViewModelBase
         _statusSieci = "Nie polaczono";
         PolaGracza = new ObservableCollection<PolePlanszyViewModel>();
         PolaPrzeciwnika = new ObservableCollection<PolePlanszyViewModel>();
+        FlotaGracza = new ObservableCollection<FlotaViewModel>();
+        FlotaPrzeciwnika = new ObservableCollection<FlotaViewModel>();
         HistoriaGier = new ObservableCollection<GameResult>();
         StrzelCommand = new RelayCommand(Strzel, CzyMoznaStrzelic);
         NowaGraCommand = new RelayCommand(_ => RozpocznijNowaGre());
@@ -45,12 +50,17 @@ public class GraViewModel : ViewModelBase
         _networkClient.Disconnected += ObsluzRozlaczenie;
 
         UtworzPolaPlansz();
+        UtworzPodgladFloty();
         WczytajHistorieGier();
         OdswiezPlansze();
     }
 
     public ObservableCollection<PolePlanszyViewModel> PolaGracza { get; }
     public ObservableCollection<PolePlanszyViewModel> PolaPrzeciwnika { get; }
+    public ObservableCollection<FlotaViewModel> FlotaGracza { get; }
+    public ObservableCollection<FlotaViewModel> FlotaPrzeciwnika { get; }
+    public IEnumerable<IGrouping<int, FlotaViewModel>> FlotaGraczaWedlugRzedow => FlotaGracza.GroupBy(statek => statek.Rzad);
+    public IEnumerable<IGrouping<int, FlotaViewModel>> FlotaPrzeciwnikaWedlugRzedow => FlotaPrzeciwnika.GroupBy(statek => statek.Rzad);
     public ObservableCollection<GameResult> HistoriaGier { get; }
     public ICommand StrzelCommand { get; }
     public ICommand NowaGraCommand { get; }
@@ -110,6 +120,8 @@ public class GraViewModel : ViewModelBase
     }
 
     public string AktualnaTura => _gra.AktualnyGracz == GraStatki.Gracz.Gracz1 ? "Gracz" : "Przeciwnik";
+    public string AktualnaTuraSieciowa => _aktualnyGraczSieciowy == 1 ? "Gracz 1" : "Gracz 2";
+    public string AktualnaTuraOpis => _trybGry == TrybGry.Bot ? AktualnaTura : AktualnaTuraSieciowa;
     public string TrybGryOpis => _trybGry == TrybGry.Bot ? "Bot" : "Multiplayer";
 
     private void UtworzPolaPlansz()
@@ -124,13 +136,34 @@ public class GraViewModel : ViewModelBase
         }
     }
 
+    private void UtworzPodgladFloty()
+    {
+        foreach (int rozmiar in new[] { 4, 3, 3, 2, 2, 2, 1, 1, 1, 1 })
+        {
+            FlotaGracza.Add(new FlotaViewModel(rozmiar));
+            FlotaPrzeciwnika.Add(new FlotaViewModel(rozmiar));
+        }
+    }
+
     private bool CzyMoznaStrzelic(object? parameter)
     {
         return parameter is PolePlanszyViewModel pole
             && pole.CzyMoznaKliknac
-            && _gra.AktualnyGracz == GraStatki.Gracz.Gracz1
-            && _gra.Stan == GraStatki.StanGry.WTrakcie
-            && (_trybGry == TrybGry.Bot || _networkClient.IsConnected);
+            && CzyTrybPozwalaStrzelic();
+    }
+
+    private bool CzyTrybPozwalaStrzelic()
+    {
+        if (_trybGry == TrybGry.Bot)
+        {
+            return _gra.AktualnyGracz == GraStatki.Gracz.Gracz1
+                && _gra.Stan == GraStatki.StanGry.WTrakcie
+                && !_botWykonujeRuch;
+        }
+
+        return _networkClient.IsConnected
+            && _numerGraczaSieciowego is not null
+            && _numerGraczaSieciowego == _aktualnyGraczSieciowy;
     }
 
     private void Strzel(object? parameter)
@@ -146,10 +179,10 @@ public class GraViewModel : ViewModelBase
             return;
         }
 
-        StrzelZBotem(pole);
+        _ = StrzelZBotemAsync(pole);
     }
 
-    private void StrzelZBotem(PolePlanszyViewModel pole)
+    private async Task StrzelZBotemAsync(PolePlanszyViewModel pole)
     {
         GraStatki.WynikRuchu ruchGracza = _gra.OddajStrzal(GraStatki.Gracz.Gracz1, pole.X, pole.Y);
         Plansza.WynikStrzalu wynik = ruchGracza.Wynik;
@@ -166,7 +199,7 @@ public class GraViewModel : ViewModelBase
 
         if (_gra.Stan == GraStatki.StanGry.WTrakcie && _gra.AktualnyGracz == GraStatki.Gracz.Gracz2)
         {
-            WykonajRuchPrzeciwnika();
+            await WykonajRuchPrzeciwnikaAsync();
         }
 
         OdswiezKomendyITure();
@@ -231,12 +264,30 @@ public class GraViewModel : ViewModelBase
             if (message.Type == NetworkMessageType.Welcome)
             {
                 _numerGraczaSieciowego = message.Player;
+                _aktualnyGraczSieciowy = message.CurrentPlayer;
+                ZastosujStanZSerwera(message);
                 StatusSieci = $"{message.Text} Tura: Gracz {message.CurrentPlayer}";
             }
             else if (message.Type == NetworkMessageType.ShotResult)
             {
+                _aktualnyGraczSieciowy = message.CurrentPlayer;
+                ZastosujStanZSerwera(message);
                 StatusSieci = $"Serwer: {message.Text}. Tura: Gracz {message.CurrentPlayer}";
                 Status = $"Serwer: {message.Result}";
+
+                if (message.Player == _numerGraczaSieciowego
+                    && message.Result is nameof(Plansza.WynikStrzalu.Pudlo)
+                        or nameof(Plansza.WynikStrzalu.Trafiony)
+                        or nameof(Plansza.WynikStrzalu.Zatopiony))
+                {
+                    LiczbaStrzalow++;
+                }
+
+                if (message.GameOver && message.Winner is not null)
+                {
+                    Status = $"Koniec gry. Zwyciezca: Gracz {message.Winner}";
+                    PokazPopupKoncaGry($"Wygrał Gracz {message.Winner}.");
+                }
             }
             else if (message.Type == NetworkMessageType.Error)
             {
@@ -273,28 +324,78 @@ public class GraViewModel : ViewModelBase
         });
     }
 
+    private void ZastosujStanZSerwera(NetworkMessage message)
+    {
+        ZastosujStanPol(PolaGracza, message.OwnBoard);
+        ZastosujStanPol(PolaPrzeciwnika, message.OpponentBoard);
+        OdswiezPodgladFlotyZeSnapshotu(FlotaGracza, message.OwnBoard, includeVisibleShips: true);
+        OdswiezPodgladFlotyZeSnapshotu(FlotaPrzeciwnika, message.OpponentBoard, includeVisibleShips: false);
+        OdswiezKomendyITure();
+    }
+
+    private static void ZastosujStanPol(
+        IEnumerable<PolePlanszyViewModel> pola,
+        IReadOnlyCollection<NetworkCell> networkCells)
+    {
+        Dictionary<(int X, int Y), NetworkCell> cells = networkCells.ToDictionary(cell => (cell.X, cell.Y));
+
+        foreach (PolePlanszyViewModel pole in pola)
+        {
+            if (cells.TryGetValue((pole.X, pole.Y), out NetworkCell? cell)
+                && Enum.TryParse(cell.State, out Plansza.StanPola stanPola))
+            {
+                pole.StanPola = stanPola;
+            }
+        }
+    }
+
     private void RozpocznijNowaGre()
     {
         _gra.RozpocznijNowaGre();
+        _aktualnyGraczSieciowy = 1;
         LiczbaStrzalow = 0;
+        _pokazanoKoniecGry = false;
         _wynikZapisany = false;
         Status = "Kliknij na pole przeciwnika";
         OdswiezPlansze();
         OdswiezKomendyITure();
     }
 
-    private void WykonajRuchPrzeciwnika()
+    private async Task WykonajRuchPrzeciwnikaAsync()
     {
-        PolePlanszyViewModel? pole = WylosujPoleDoStrzalu(PolaGracza);
-        if (pole is null)
-        {
-            return;
-        }
+        List<string> wynikiBota = new();
+        _botWykonujeRuch = true;
+        OdswiezKomendyITure();
 
-        GraStatki.WynikRuchu ruchPrzeciwnika = _gra.OddajStrzal(GraStatki.Gracz.Gracz2, pole.X, pole.Y);
-        Status = $"Gracz: {Status.Replace("Gracz: ", string.Empty)} | Przeciwnik: {ruchPrzeciwnika.Wynik}";
-        OdswiezPlansze();
-        ZapiszWynikJesliGraZakonczona();
+        try
+        {
+            while (_gra.Stan == GraStatki.StanGry.WTrakcie && _gra.AktualnyGracz == GraStatki.Gracz.Gracz2)
+            {
+                await Task.Delay(450);
+
+                PolePlanszyViewModel? pole = WybierzPoleDlaBota();
+                if (pole is null)
+                {
+                    break;
+                }
+
+                GraStatki.WynikRuchu ruchPrzeciwnika = _gra.OddajStrzal(GraStatki.Gracz.Gracz2, pole.X, pole.Y);
+                wynikiBota.Add(ruchPrzeciwnika.Wynik.ToString());
+                OdswiezPlansze();
+                ZapiszWynikJesliGraZakonczona();
+            }
+        }
+        finally
+        {
+            _botWykonujeRuch = false;
+
+            if (wynikiBota.Count > 0)
+            {
+                Status = $"Gracz: {Status.Replace("Gracz: ", string.Empty)} | Przeciwnik: {string.Join(", ", wynikiBota)}";
+            }
+
+            OdswiezKomendyITure();
+        }
     }
 
     private PolePlanszyViewModel? WylosujPoleDoStrzalu(IEnumerable<PolePlanszyViewModel> pola)
@@ -311,6 +412,43 @@ public class GraViewModel : ViewModelBase
         return dostepnePola[_random.Next(dostepnePola.Count)];
     }
 
+    private PolePlanszyViewModel? WybierzPoleDlaBota()
+    {
+        List<PolePlanszyViewModel> celeObokTrafien = PolaGracza
+            .Where(pole => pole.StanPola == Plansza.StanPola.Trafiony)
+            .SelectMany(PobierzSasiedniePola)
+            .Where(pole => pole.StanPola is Plansza.StanPola.Puste or Plansza.StanPola.Statek)
+            .DistinctBy(pole => (pole.X, pole.Y))
+            .ToList();
+
+        if (celeObokTrafien.Count > 0)
+        {
+            return celeObokTrafien[_random.Next(celeObokTrafien.Count)];
+        }
+
+        return WylosujPoleDoStrzalu(PolaGracza);
+    }
+
+    private IEnumerable<PolePlanszyViewModel> PobierzSasiedniePola(PolePlanszyViewModel pole)
+    {
+        (int X, int Y)[] kierunki =
+        {
+            (pole.X + 1, pole.Y),
+            (pole.X - 1, pole.Y),
+            (pole.X, pole.Y + 1),
+            (pole.X, pole.Y - 1)
+        };
+
+        foreach ((int x, int y) in kierunki)
+        {
+            PolePlanszyViewModel? sasiedniePole = PolaGracza.FirstOrDefault(p => p.X == x && p.Y == y);
+            if (sasiedniePole is not null)
+            {
+                yield return sasiedniePole;
+            }
+        }
+    }
+
     private void OdswiezPlansze()
     {
         Plansza planszaGracza = _gra.PlanszaGracz1;
@@ -325,12 +463,89 @@ public class GraViewModel : ViewModelBase
         {
             pole.StanPola = planszaPrzeciwnika.PobierzStanPola(pole.X, pole.Y);
         }
+
+        OdswiezPodgladFloty(FlotaGracza, planszaGracza);
+        OdswiezPodgladFloty(FlotaPrzeciwnika, planszaPrzeciwnika);
+    }
+
+    private static void OdswiezPodgladFloty(IEnumerable<FlotaViewModel> flota, Plansza plansza)
+    {
+        Dictionary<int, Queue<bool>> zatopieniaWedlugRozmiaru = plansza.Statki
+            .GroupBy(statek => statek.Wielkosc)
+            .ToDictionary(
+                group => group.Key,
+                group => new Queue<bool>(group.Select(statek => statek.CzyZatopiony())));
+
+        foreach (FlotaViewModel statekFloty in flota)
+        {
+            statekFloty.CzyZatopiony = zatopieniaWedlugRozmiaru.TryGetValue(statekFloty.Rozmiar, out Queue<bool>? zatopienia)
+                && zatopienia.Count > 0
+                && zatopienia.Dequeue();
+        }
+    }
+
+    private static void OdswiezPodgladFlotyZeSnapshotu(
+        IEnumerable<FlotaViewModel> flota,
+        IReadOnlyCollection<NetworkCell> networkCells,
+        bool includeVisibleShips)
+    {
+        HashSet<(int X, int Y)> zatopionePola = networkCells
+            .Where(cell => Enum.TryParse(cell.State, out Plansza.StanPola stan) && stan == Plansza.StanPola.Zatopiony)
+            .Select(cell => (cell.X, cell.Y))
+            .ToHashSet();
+
+        Dictionary<int, int> zatopioneWedlugRozmiaru = new();
+
+        while (zatopionePola.Count > 0)
+        {
+            (int X, int Y) start = zatopionePola.First();
+            int rozmiar = PoliczSpojnyStatek(start, zatopionePola);
+            zatopioneWedlugRozmiaru[rozmiar] = zatopioneWedlugRozmiaru.GetValueOrDefault(rozmiar) + 1;
+        }
+
+        Dictionary<int, int> wykorzystaneZatopienia = new();
+
+        foreach (FlotaViewModel statekFloty in flota)
+        {
+            int wykorzystane = wykorzystaneZatopienia.GetValueOrDefault(statekFloty.Rozmiar);
+            int zatopione = zatopioneWedlugRozmiaru.GetValueOrDefault(statekFloty.Rozmiar);
+            statekFloty.CzyZatopiony = wykorzystane < zatopione;
+            wykorzystaneZatopienia[statekFloty.Rozmiar] = wykorzystane + 1;
+        }
+    }
+
+    private static int PoliczSpojnyStatek((int X, int Y) start, HashSet<(int X, int Y)> polaStatkow)
+    {
+        Queue<(int X, int Y)> kolejka = new();
+        kolejka.Enqueue(start);
+        polaStatkow.Remove(start);
+        int rozmiar = 0;
+
+        while (kolejka.Count > 0)
+        {
+            (int x, int y) = kolejka.Dequeue();
+            rozmiar++;
+
+            foreach ((int nx, int ny) in new[] { (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1) })
+            {
+                if (polaStatkow.Remove((nx, ny)))
+                {
+                    kolejka.Enqueue((nx, ny));
+                }
+            }
+        }
+
+        return rozmiar;
     }
 
     private void OdswiezKomendyITure()
     {
         OnPropertyChanged(nameof(AktualnaTura));
+        OnPropertyChanged(nameof(AktualnaTuraSieciowa));
+        OnPropertyChanged(nameof(AktualnaTuraOpis));
         OnPropertyChanged(nameof(TrybGryOpis));
+        OnPropertyChanged(nameof(FlotaGraczaWedlugRzedow));
+        OnPropertyChanged(nameof(FlotaPrzeciwnikaWedlugRzedow));
 
         if (StrzelCommand is RelayCommand relayCommand)
         {
@@ -361,7 +576,19 @@ public class GraViewModel : ViewModelBase
         _gameResultRepository.Add(gameResult);
         _wynikZapisany = true;
         Status = $"Koniec gry. Zwyciezca: {gameResult.Winner}";
+        PokazPopupKoncaGry($"Wygrał {gameResult.Winner}.");
         WczytajHistorieGier();
+    }
+
+    private void PokazPopupKoncaGry(string message)
+    {
+        if (_pokazanoKoniecGry)
+        {
+            return;
+        }
+
+        _pokazanoKoniecGry = true;
+        MessageBox.Show(message, "Koniec gry", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void WczytajHistorieGier()
