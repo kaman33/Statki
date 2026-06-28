@@ -359,6 +359,20 @@
                             Command="{Binding TrybMultiplayerCommand}"/>
 
                     <TextBlock Style="{StaticResource SectionTitleStyle}" Text="Sieć"/>
+                    <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                               Margin="0,5,0,2"
+                               Text="Adres serwera"/>
+                    <TextBox Text="{Binding ServerHost, UpdateSourceTrigger=PropertyChanged}"
+                             Padding="8,5"
+                             BorderBrush="#CBD5E1"
+                             BorderThickness="1"/>
+                    <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                               Margin="0,7,0,2"
+                               Text="Port"/>
+                    <TextBox Text="{Binding ServerPort, UpdateSourceTrigger=PropertyChanged}"
+                             Padding="8,5"
+                             BorderBrush="#CBD5E1"
+                             BorderThickness="1"/>
                     <TextBlock Margin="0,5,0,0"
                                TextWrapping="Wrap"
                                Foreground="{StaticResource MutedTextBrush}"

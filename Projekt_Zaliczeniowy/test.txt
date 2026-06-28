@@ -1,0 +1,4 @@
+﻿Serwer - interfejs na ktorym nasluchuje - w pliku konfiguracyjnym - byle nie bylo hardcodowane 
+Klient - zczytanie z pliku z czym ma sie polaczyc/mozliwosc wpisania adresu w okienku
+Laczyc sie po sieci / nie tylko lokalnie
+

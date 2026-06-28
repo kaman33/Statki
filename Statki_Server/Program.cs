@@ -1,17 +1,20 @@
+using System.Linq.Expressions;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using Statki_Game;
 using Statki_Network;
 
-const int port = 5000;
+ServerSettings settings = ServerSettings.Load();
+IPAddress listenAddress = settings.GetListenAddress();
 
-TcpListener listener = new(IPAddress.Loopback, port);
+TcpListener listener = new(listenAddress, settings.Port);
 GraStatki game = new();
 SemaphoreSlim gameLock = new(1, 1);
 List<ClientConnection> clients = new();
 
 listener.Start();
-Console.WriteLine($"Serwer Statki dziala na 127.0.0.1:{port}");
+Console.WriteLine($"Serwer Statki dziala na {listenAddress}:{settings.Port}");
 
 while (true)
 {
@@ -184,5 +187,42 @@ sealed class ClientConnection : IDisposable
         Reader.Dispose();
         Writer.Dispose();
         _tcpClient.Dispose();
+    }
+}
+
+sealed class ServerSettings
+{
+    private const string FileName = "server-settings.json";
+    public string Host { get; set; } = "0.0.0.0";
+    public int Port { get; set; } = 5000;
+
+    public static ServerSettings Load()
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, FileName);
+        if (!File.Exists(path))
+        {
+            return new ServerSettings();
+        }
+        
+        string json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<ServerSettings>(json, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        }) ?? new ServerSettings();
+    }
+
+    public IPAddress GetListenAddress()
+    {
+        if (string.Equals(Host, "localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            return IPAddress.Loopback;
+        }
+            
+        if (IPAddress.TryParse(Host, out IPAddress? address))
+        {
+            return address;
+        }
+        
+        throw new InvalidOperationException($"Nieprawidlowy adres nasluchiwania serwera: {Host}");
     }
 }

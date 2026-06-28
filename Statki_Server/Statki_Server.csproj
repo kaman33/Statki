@@ -5,6 +5,10 @@
     <ProjectReference Include="..\Statki_Network\Statki_Network.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="server-settings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>

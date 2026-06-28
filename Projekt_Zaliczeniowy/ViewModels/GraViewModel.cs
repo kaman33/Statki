@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Net.Sockets;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
 using Projekt_Zaliczeniowy.Data;
@@ -23,16 +24,21 @@ public class GraViewModel : ViewModelBase
     private bool _botWykonujeRuch;
     private bool _pokazanoKoniecGry;
     private bool _wynikZapisany;
+    private string _serverHost;
+    private string _serverPort;
     private string _statusSieci;
     private string _status;
 
     public GraViewModel()
     {
+        ClientNetworkSettings networkSettings = ClientNetworkSettings.Load();
         _gameResultRepository = new GameResultRepository();
         _gra = new GraStatki();
         _networkClient = new StatkiNetworkClient();
         _random = new Random();
         _trybGry = TrybGry.Bot;
+        _serverHost = networkSettings.Host;
+        _serverPort = networkSettings.Port.ToString();
         _status = "Kliknij na pole przeciwnika";
         _statusSieci = "Nie polaczono";
         PolaGracza = new ObservableCollection<PolePlanszyViewModel>();
@@ -123,6 +129,37 @@ public class GraViewModel : ViewModelBase
     public string AktualnaTuraSieciowa => _aktualnyGraczSieciowy == 1 ? "Gracz 1" : "Gracz 2";
     public string AktualnaTuraOpis => _trybGry == TrybGry.Bot ? AktualnaTura : AktualnaTuraSieciowa;
     public string TrybGryOpis => _trybGry == TrybGry.Bot ? "Bot" : "Multiplayer";
+
+    public string ServerHost
+    {
+        get => _serverHost;
+        set
+        {
+            if (_serverHost == value)
+            {
+                return;
+            }
+
+            _serverHost = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string ServerPort
+    {
+        get => _serverPort;
+        set
+        {
+            if (_serverPort == value)
+            {
+                return;
+            }
+
+            _serverPort = value;
+            OnPropertyChanged();
+            OdswiezKomendyITure();
+        }
+    }
 
     private void UtworzPolaPlansz()
     {
@@ -223,10 +260,18 @@ public class GraViewModel : ViewModelBase
     {
         try
         {
+            if (!int.TryParse(ServerPort, out int port) || port is < 1 or > 65535)
+            {
+                StatusSieci = "Nieprawidlowy port serwera.";
+                OdswiezKomendyITure();
+                return;
+            }
+
+            string host = string.IsNullOrWhiteSpace(ServerHost) ? "127.0.0.1" : ServerHost.Trim();
             _trybGry = TrybGry.Multiplayer;
             OnPropertyChanged(nameof(TrybGryOpis));
-            StatusSieci = "Laczenie z 127.0.0.1:5000...";
-            await _networkClient.ConnectAsync("127.0.0.1", 5000);
+            StatusSieci = $"Laczenie z {host}:{port}...";
+            await _networkClient.ConnectAsync(host, port);
             StatusSieci = "Polaczono z serwerem";
             OdswiezKomendyITure();
         }
@@ -598,6 +643,29 @@ public class GraViewModel : ViewModelBase
         foreach (GameResult result in _gameResultRepository.GetLatestResults())
         {
             HistoriaGier.Add(result);
+        }
+    }
+
+    private sealed class ClientNetworkSettings
+    {
+        private const string FileName = "client-network-settings.json";
+
+        public string Host { get; set; } = "127.0.0.1";
+        public int Port { get; set; } = 5000;
+
+        public static ClientNetworkSettings Load()
+        {
+            string path = Path.Combine(AppContext.BaseDirectory, FileName);
+            if (!File.Exists(path))
+            {
+                return new ClientNetworkSettings();
+            }
+
+            string json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<ClientNetworkSettings>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }) ?? new ClientNetworkSettings();
         }
     }
 }
